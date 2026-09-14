@@ -1,7 +1,7 @@
-"""Command-line interface for fastapi-app.
+"""Command-line interface for fastapi-foundry.
 
 This module only handles CLI concerns: argument parsing, user-facing output
-and exit codes. All project-generation logic lives in ``fastapi_app.generators``.
+and exit codes. All project-generation logic lives in ``fastapi_foundry.generators``.
 """
 
 from pathlib import Path
@@ -9,7 +9,7 @@ from typing import Annotated
 
 import typer
 
-from fastapi_app.generators.project import (
+from fastapi_foundry.generators.project import (
     InvalidProjectNameError,
     ProjectExistsError,
     ProjectName,

@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from fastapi_app.cli import app
-from fastapi_app.generators.project import (
+from fastapi_foundry.cli import app
+from fastapi_foundry.generators.project import (
     InvalidProjectNameError,
     ProjectExistsError,
     ProjectName,

@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi_app.generators import templates
+from fastapi_foundry.generators import templates
 
 # Letters, digits, hyphens and underscores only, starting with a letter.
 # This rules out path separators, "..", absolute paths and hidden directories.
