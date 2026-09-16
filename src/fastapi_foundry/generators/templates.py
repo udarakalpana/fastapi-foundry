@@ -95,7 +95,7 @@ app = FastAPI(title=config.APP_NAME, debug=config.DEBUG)
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": "Hello from FastAPI"}
+    return {"message": "Hello from fastapi-foundry"}
 '''
 
 _CONFIG_PY = Template('''\
