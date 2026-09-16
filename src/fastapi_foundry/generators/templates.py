@@ -8,6 +8,8 @@ from string import Template
 
 FASTAPI_VERSION = "0.141.1"
 UVICORN_VERSION = "0.53.0"
+SQLALCHEMY_VERSION = "2.0.54"
+PYMYSQL_VERSION = "1.2.0"
 UV_BUILD_REQUIREMENT = "uv_build>=0.12.3,<0.13.0"
 
 _PYPROJECT_TOML = Template('''\
@@ -20,6 +22,8 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=$fastapi_version",
     "uvicorn[standard]>=$uvicorn_version",
+    "sqlalchemy>=$sqlalchemy_version",
+    "pymysql>=$pymysql_version",
 ]
 
 [build-system]
@@ -95,7 +99,7 @@ app = FastAPI(title=config.APP_NAME, debug=config.DEBUG)
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": "Hello from FastAPI"}
+    return {"message": "Hello from fastapi-foundry"}
 '''
 
 _CONFIG_PY = Template('''\
@@ -111,6 +115,21 @@ DATABASE_INIT_PY = '''\
 """Database package."""
 '''
 
+_MIGRATION_PY = Template('''\
+"""$summary"""
+
+# Read by ``fastapi-foundry migration`` to list the tables that already exist.
+TABLE = "$table"
+
+
+def upgrade() -> None:
+    """Apply this migration."""
+
+
+def downgrade() -> None:
+    """Revert this migration."""
+''')
+
 DATABASE_CONNECTION_PY = '''\
 """Database connection setup.
 
@@ -125,6 +144,8 @@ def pyproject_toml(distribution: str, package: str) -> str:
         package=package,
         fastapi_version=FASTAPI_VERSION,
         uvicorn_version=UVICORN_VERSION,
+        sqlalchemy_version=SQLALCHEMY_VERSION,
+        pymysql_version=PYMYSQL_VERSION,
         uv_build_requirement=UV_BUILD_REQUIREMENT,
     )
 
@@ -143,3 +164,7 @@ def package_init(distribution: str) -> str:
 
 def config_py(distribution: str) -> str:
     return _CONFIG_PY.substitute(distribution=distribution)
+
+
+def migration_py(table: str, summary: str) -> str:
+    return _MIGRATION_PY.substitute(table=table, summary=summary)

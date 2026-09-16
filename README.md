@@ -22,7 +22,7 @@ uvx fastapi-foundry init myproject
 - **Modern packaging**: `src/` layout, `pyproject.toml` and the `uv_build` backend.
 - **Safe by default**: never overwrites an existing directory and rejects unsafe project names.
 - **Friendly names**: `my-api` becomes the `my-api/` folder with an importable `my_api` package.
-- **Minimal dependencies**: generated projects depend only on FastAPI and Uvicorn.
+- **Database ready**: SQLAlchemy and PyMySQL are included so you can connect to MySQL right away.
 
 ## Requirements
 
@@ -117,7 +117,7 @@ uv run uvicorn myproject.main:app --reload
 
 ```text
 myproject/
-├── pyproject.toml        # Project metadata and dependencies (FastAPI, Uvicorn)
+├── pyproject.toml        # Project metadata and dependencies (FastAPI, Uvicorn, SQLAlchemy, PyMySQL)
 ├── .env                  # Environment variables
 ├── .gitignore            # Python, uv and tooling ignores
 ├── README.md             # How to install and run the project
@@ -189,7 +189,56 @@ If the target folder already exists, fastapi-foundry stops with an error instead
 fastapi-foundry --help          # Show available commands
 fastapi-foundry init --help     # Show help for the init command
 fastapi-foundry init <name>     # Create a new project in the current directory
+fastapi-foundry migration       # Create a migration file in ./migrations
 ```
+
+## Migrations
+
+Run `fastapi-foundry migration` from the project root to add a migration file:
+
+```bash
+uvx fastapi-foundry migration
+```
+
+It asks whether the migration targets an existing table or a new one. For a new
+table it asks for the table name; for an existing table it lists the tables
+earlier migrations already cover so you can pick one.
+
+```text
+Is this migration for an existing table or a new table?
+  1) Existing table
+  2) New table
+Select [1-2]: 2
+What is the name of the table this migration should structure: users
+Created migration: migrations/20260916143022_create_users_table.py
+```
+
+Migration files are written to a `migrations/` directory at the project root:
+
+```text
+migrations/
+└── 20260916143022_create_users_table.py
+```
+
+Each file records its table in a `TABLE` constant, which is how the command
+lists existing tables. No database connection is needed.
+
+```python
+"""Create table 'users'."""
+
+TABLE = "users"
+
+
+def upgrade() -> None:
+    """Apply this migration."""
+
+
+def downgrade() -> None:
+    """Revert this migration."""
+```
+
+The `upgrade()` and `downgrade()` bodies are yours to fill in; fastapi-foundry
+does not run migrations yet.
 
 ## Roadmap
 

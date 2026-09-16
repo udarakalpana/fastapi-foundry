@@ -42,6 +42,8 @@ def test_generated_pyproject_is_valid(tmp_path: Path) -> None:
     dependencies = pyproject["project"]["dependencies"]
     assert any(dep.startswith("fastapi") for dep in dependencies)
     assert any(dep.startswith("uvicorn") for dep in dependencies)
+    assert any(dep.startswith("sqlalchemy") for dep in dependencies)
+    assert any(dep.startswith("pymysql") for dep in dependencies)
     assert pyproject["tool"]["uv"]["build-backend"]["module-name"] == "my_fastapi_app"
 
 
