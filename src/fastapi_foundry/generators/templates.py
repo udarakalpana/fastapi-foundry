@@ -115,6 +115,21 @@ DATABASE_INIT_PY = '''\
 """Database package."""
 '''
 
+_MIGRATION_PY = Template('''\
+"""$summary"""
+
+# Read by ``fastapi-foundry migration`` to list the tables that already exist.
+TABLE = "$table"
+
+
+def upgrade() -> None:
+    """Apply this migration."""
+
+
+def downgrade() -> None:
+    """Revert this migration."""
+''')
+
 DATABASE_CONNECTION_PY = '''\
 """Database connection setup.
 
@@ -149,3 +164,7 @@ def package_init(distribution: str) -> str:
 
 def config_py(distribution: str) -> str:
     return _CONFIG_PY.substitute(distribution=distribution)
+
+
+def migration_py(table: str, summary: str) -> str:
+    return _MIGRATION_PY.substitute(table=table, summary=summary)
