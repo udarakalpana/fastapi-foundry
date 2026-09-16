@@ -8,6 +8,8 @@ from string import Template
 
 FASTAPI_VERSION = "0.141.1"
 UVICORN_VERSION = "0.53.0"
+SQLALCHEMY_VERSION = "2.0.54"
+PYMYSQL_VERSION = "1.2.0"
 UV_BUILD_REQUIREMENT = "uv_build>=0.12.3,<0.13.0"
 
 _PYPROJECT_TOML = Template('''\
@@ -20,6 +22,8 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=$fastapi_version",
     "uvicorn[standard]>=$uvicorn_version",
+    "sqlalchemy>=$sqlalchemy_version",
+    "pymysql>=$pymysql_version",
 ]
 
 [build-system]
@@ -125,6 +129,8 @@ def pyproject_toml(distribution: str, package: str) -> str:
         package=package,
         fastapi_version=FASTAPI_VERSION,
         uvicorn_version=UVICORN_VERSION,
+        sqlalchemy_version=SQLALCHEMY_VERSION,
+        pymysql_version=PYMYSQL_VERSION,
         uv_build_requirement=UV_BUILD_REQUIREMENT,
     )
 

@@ -22,7 +22,7 @@ uvx fastapi-foundry init myproject
 - **Modern packaging**: `src/` layout, `pyproject.toml` and the `uv_build` backend.
 - **Safe by default**: never overwrites an existing directory and rejects unsafe project names.
 - **Friendly names**: `my-api` becomes the `my-api/` folder with an importable `my_api` package.
-- **Minimal dependencies**: generated projects depend only on FastAPI and Uvicorn.
+- **Database ready**: SQLAlchemy and PyMySQL are included so you can connect to MySQL right away.
 
 ## Requirements
 
@@ -117,7 +117,7 @@ uv run uvicorn myproject.main:app --reload
 
 ```text
 myproject/
-├── pyproject.toml        # Project metadata and dependencies (FastAPI, Uvicorn)
+├── pyproject.toml        # Project metadata and dependencies (FastAPI, Uvicorn, SQLAlchemy, PyMySQL)
 ├── .env                  # Environment variables
 ├── .gitignore            # Python, uv and tooling ignores
 ├── README.md             # How to install and run the project
