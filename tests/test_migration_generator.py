@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 from fastapi_foundry.cli import app
 from fastapi_foundry.generators.migration import (
-    MIGRATIONS_DIR_NAME,
+    MIGRATIONS_DIR,
     InvalidTableNameError,
     MigrationKind,
     create_migration,
@@ -43,7 +43,7 @@ def test_invalid_table_names_are_rejected(invalid_name: str) -> None:
 def test_create_migration_creates_directory_and_file(tmp_path: Path) -> None:
     migration_path = create_migration("users", MigrationKind.NEW_TABLE, tmp_path, now=FIXED_NOW)
 
-    migrations_dir = tmp_path / MIGRATIONS_DIR_NAME
+    migrations_dir = tmp_path / MIGRATIONS_DIR
     assert migrations_dir.is_dir()
     assert migration_path.parent == migrations_dir
     assert migration_path.is_file()
@@ -90,7 +90,7 @@ def test_create_migration_rejects_invalid_table_name(tmp_path: Path) -> None:
     with pytest.raises(InvalidTableNameError):
         create_migration("../evil", MigrationKind.NEW_TABLE, tmp_path, now=FIXED_NOW)
 
-    assert not (tmp_path / MIGRATIONS_DIR_NAME).exists()
+    assert not (tmp_path / MIGRATIONS_DIR).exists()
 
 
 # --- existing_tables ------------------------------------------------------
@@ -116,7 +116,7 @@ def test_existing_tables_deduplicates_repeated_tables(tmp_path: Path) -> None:
 
 def test_existing_tables_ignores_unrelated_and_broken_files(tmp_path: Path) -> None:
     create_migration("users", MigrationKind.NEW_TABLE, tmp_path, now=FIXED_NOW)
-    migrations_dir = tmp_path / MIGRATIONS_DIR_NAME
+    migrations_dir = tmp_path / MIGRATIONS_DIR
     (migrations_dir / "notes.txt").write_text("posts")
     (migrations_dir / "__init__.py").write_text("")
     (migrations_dir / "broken.py").write_text("def (:")
@@ -133,7 +133,7 @@ def test_cli_migration_for_a_new_table(tmp_path: Path, monkeypatch: pytest.Monke
     result = CliRunner().invoke(app, ["migration"], input="2\nusers\n")
 
     assert result.exit_code == 0, result.output
-    created = list((tmp_path / MIGRATIONS_DIR_NAME).glob("*_create_users_table.py"))
+    created = list((tmp_path / MIGRATIONS_DIR).glob("*_create_users_table.py"))
     assert len(created) == 1
     assert created[0].name in result.output
 
@@ -148,7 +148,7 @@ def test_cli_migration_binds_an_existing_table(tmp_path: Path, monkeypatch: pyte
     assert result.exit_code == 0, result.output
     # Tables are listed in sorted order, so option 2 is "users".
     assert "users" in result.output
-    assert list((tmp_path / MIGRATIONS_DIR_NAME).glob("*_update_users_table.py"))
+    assert list((tmp_path / MIGRATIONS_DIR).glob("*_update_users_table.py"))
 
 
 def test_cli_migration_existing_table_without_any_tables_fails(
@@ -168,4 +168,4 @@ def test_cli_migration_reprompts_on_invalid_input(tmp_path: Path, monkeypatch: p
     result = CliRunner().invoke(app, ["migration"], input="9\nx\n2\nuser-roles\nuser_roles\n")
 
     assert result.exit_code == 0, result.output
-    assert list((tmp_path / MIGRATIONS_DIR_NAME).glob("*_create_user_roles_table.py"))
+    assert list((tmp_path / MIGRATIONS_DIR).glob("*_create_user_roles_table.py"))

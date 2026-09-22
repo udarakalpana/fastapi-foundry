@@ -1,6 +1,6 @@
 """Generate migration files for an existing project.
 
-Migrations live in a ``migrations/`` directory at the project root. Each file
+Migrations live in the project's ``app/database/`` directory. Each file
 records the table it targets in a module-level ``TABLE`` constant, which is how
 :func:`existing_tables` discovers the tables earlier migrations already cover
 without needing a database connection.
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from fastapi_foundry.generators import templates
 
-MIGRATIONS_DIR_NAME = "migrations"
+MIGRATIONS_DIR = Path("app", "database")
 
 # Unquoted SQL identifier rules, restricted further so the name is also safe to
 # use in a filename: no path separators, dots or spaces.
@@ -63,7 +63,7 @@ def normalize_table_name(raw_name: str) -> str:
 
 def migrations_dir(project_root: Path | None = None) -> Path:
     """Return the migrations directory for ``project_root``."""
-    return (project_root or Path.cwd()) / MIGRATIONS_DIR_NAME
+    return (project_root or Path.cwd()) / MIGRATIONS_DIR
 
 
 def existing_tables(project_root: Path | None = None) -> list[str]:

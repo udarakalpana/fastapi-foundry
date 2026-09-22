@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi_foundry.generators import templates
+from fastapi_foundry.generators.migration import MigrationKind, create_migration
 
 # Letters, digits, hyphens and underscores only, starting with a letter.
 # This rules out path separators, "..", absolute paths and hidden directories.
@@ -34,7 +35,11 @@ class ProjectName:
     For ``my-fastapi-app``:
         directory    -> ``my-fastapi-app``  (project root folder)
         distribution -> ``my-fastapi-app``  (``[project].name`` in pyproject.toml)
-        package      -> ``my_fastapi_app``  (importable Python package)
+        package      -> ``my_fastapi_app``  (snake_case form)
+
+    Generated projects put their code in a fixed ``app/`` directory, so ``package``
+    no longer names a directory. It is kept as the normalized form that
+    ``distribution`` is derived from and that the reserved-name check runs against.
     """
 
     directory: str
@@ -97,22 +102,19 @@ def create_project(name: str | ProjectName, parent_dir: Path | None = None) -> P
 
 
 def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
-    package_dir = project_root / "src" / project_name.package
+    app_dir = project_root / "app"
 
     files: dict[Path, str] = {
         project_root / "pyproject.toml": templates.pyproject_toml(
-            project_name.distribution, project_name.package
+            project_name.distribution
         ),
         project_root / ".env": templates.env_file(project_name.distribution),
         project_root / ".gitignore": templates.GITIGNORE,
-        project_root / "README.md": templates.readme(
-            project_name.directory, project_name.package
-        ),
-        package_dir / "__init__.py": templates.package_init(project_name.distribution),
-        package_dir / "main.py": templates.MAIN_PY,
-        package_dir / "config.py": templates.config_py(project_name.distribution),
-        package_dir / "database" / "__init__.py": templates.DATABASE_INIT_PY,
-        package_dir / "database" / "connection.py": templates.DATABASE_CONNECTION_PY,
+        project_root / "README.md": templates.readme(project_name.directory),
+        app_dir / "routes.py": templates.ROUTES_PY,
+        app_dir / "config.py": templates.config_py(project_name.distribution),
+        app_dir / "controller" / "home_controller.py": templates.HOME_CONTROLLER_PY,
+        app_dir / "database" / "connection.py": templates.DATABASE_CONNECTION_PY,
     }
 
     for file_path, content in files.items():
@@ -120,3 +122,7 @@ def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
         # "x" mode fails instead of overwriting if a file somehow already exists.
         with file_path.open("x", encoding="utf-8") as file:
             file.write(content)
+
+    # Ship a worked example, written by the same generator the CLI uses, so a
+    # default migration is byte-identical to one created by `foundry migration`.
+    create_migration("users", MigrationKind.NEW_TABLE, project_root)

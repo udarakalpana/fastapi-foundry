@@ -10,9 +10,8 @@ FASTAPI_VERSION = "0.141.1"
 UVICORN_VERSION = "0.53.0"
 SQLALCHEMY_VERSION = "2.0.54"
 PYMYSQL_VERSION = "1.2.0"
-UV_BUILD_REQUIREMENT = "uv_build>=0.12.3,<0.13.0"
 
-_PYPROJECT_TOML = Template('''\
+_PYPROJECT_TOML = Template("""\
 [project]
 name = "$distribution"
 version = "0.1.0"
@@ -26,13 +25,10 @@ dependencies = [
     "pymysql>=$pymysql_version",
 ]
 
-[build-system]
-requires = ["$uv_build_requirement"]
-build-backend = "uv_build"
-
-[tool.uv.build-backend]
-module-name = "$package"
-''')
+# An application is deployed, not installed, so there is nothing to build.
+[tool.uv]
+package = false
+""")
 
 _ENV_FILE = Template('''\
 APP_NAME=$distribution
@@ -73,7 +69,7 @@ uv sync
 ## Run the application
 
 ```bash
-uv run uvicorn $package.main:app --reload
+uv run uvicorn app.routes:app --reload
 ```
 
 To load settings from `.env`, add `--env-file .env`.
@@ -85,21 +81,33 @@ To load settings from `.env`, add `--env-file .env`.
 - OpenAPI schema: http://127.0.0.1:8000/openapi.json
 ''')
 
-_PACKAGE_INIT = Template('''\
-"""$distribution FastAPI application."""
-''')
+ROUTES_PY = '''\
+"""Application routes."""
 
-MAIN_PY = '''\
 from fastapi import FastAPI
 
-from . import config
+from app.config import APP_NAME, DEBUG
+from app.controller.home_controller import HomeController
 
-app = FastAPI(title=config.APP_NAME, debug=config.DEBUG)
+app = FastAPI(title=APP_NAME, debug=DEBUG)
+
+home_controller = HomeController()
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": "Hello from fastapi-foundry"}
+    return home_controller.index()
+'''
+
+HOME_CONTROLLER_PY = '''\
+"""Controller for the application root."""
+
+
+class HomeController:
+    """Handles requests for the application root."""
+
+    def index(self) -> dict[str, str]:
+        return {"message": "Hello from fastapi-foundry"}
 '''
 
 _CONFIG_PY = Template('''\
@@ -110,10 +118,6 @@ import os
 APP_NAME: str = os.getenv("APP_NAME", "$distribution")
 DEBUG: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
 ''')
-
-DATABASE_INIT_PY = '''\
-"""Database package."""
-'''
 
 _MIGRATION_PY = Template('''\
 """$summary"""
@@ -138,15 +142,13 @@ Intentionally empty: the database layer will be added in a later phase.
 '''
 
 
-def pyproject_toml(distribution: str, package: str) -> str:
+def pyproject_toml(distribution: str) -> str:
     return _PYPROJECT_TOML.substitute(
         distribution=distribution,
-        package=package,
         fastapi_version=FASTAPI_VERSION,
         uvicorn_version=UVICORN_VERSION,
         sqlalchemy_version=SQLALCHEMY_VERSION,
         pymysql_version=PYMYSQL_VERSION,
-        uv_build_requirement=UV_BUILD_REQUIREMENT,
     )
 
 
@@ -154,12 +156,8 @@ def env_file(distribution: str) -> str:
     return _ENV_FILE.substitute(distribution=distribution)
 
 
-def readme(directory: str, package: str) -> str:
-    return _README.substitute(directory=directory, package=package)
-
-
-def package_init(distribution: str) -> str:
-    return _PACKAGE_INIT.substitute(distribution=distribution)
+def readme(directory: str) -> str:
+    return _README.substitute(directory=directory)
 
 
 def config_py(distribution: str) -> str:
