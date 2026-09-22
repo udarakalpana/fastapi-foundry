@@ -11,7 +11,7 @@ from typing import Annotated
 import typer
 
 from fastapi_foundry.generators.migration import (
-    MIGRATIONS_DIR_NAME,
+    MIGRATIONS_DIR,
     InvalidTableNameError,
     MigrationKind,
     create_migration,
@@ -58,13 +58,10 @@ def init(
         f"Created FastAPI project: {project_name.directory}",
         fg=typer.colors.GREEN,
     )
-    if project_name.package != project_name.directory:
-        typer.echo(f"Python package name: {project_name.package}")
-
     typer.echo("\nNext steps:")
     typer.echo(f"  cd {project_path.name}")
     typer.echo("  uv sync")
-    typer.echo(f"  uv run uvicorn {project_name.package}.main:app --reload")
+    typer.echo("  uv run uvicorn app.routes:app --reload")
 
 
 @app.command()
@@ -101,7 +98,7 @@ def _prompt_existing_table(project_root: Path) -> str:
     tables = existing_tables(project_root)
     if not tables:
         typer.secho(
-            f"Error: No existing tables found in '{MIGRATIONS_DIR_NAME}/'. "
+            f"Error: No existing tables found in '{MIGRATIONS_DIR}/'. "
             "Create a migration for a new table first.",
             fg=typer.colors.RED,
             err=True,

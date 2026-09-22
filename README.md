@@ -6,7 +6,7 @@
 
 **fastapi-foundry** is a command-line tool that scaffolds new [FastAPI](https://fastapi.tiangolo.com/) projects in seconds.
 
-One command gives you a ready-to-run FastAPI application with a clean `src/` layout,
+One command gives you a ready-to-run FastAPI application with a clean `app/` layout,
 a modern [uv](https://docs.astral.sh/uv/)-compatible `pyproject.toml`, environment-based
 configuration and a sensible `.gitignore`, so you can skip the boilerplate and start
 building your API.
@@ -19,9 +19,9 @@ uvx fastapi-foundry init myproject
 
 - **One-command setup**: `fastapi-foundry init <name>` creates a complete project.
 - **Runs immediately**: the generated app starts with `uv sync` and `uvicorn`, no edits needed.
-- **Modern packaging**: `src/` layout, `pyproject.toml` and the `uv_build` backend.
+- **Structured by default**: routes in `app/routes.py` delegating to controller classes in `app/controller/`.
 - **Safe by default**: never overwrites an existing directory and rejects unsafe project names.
-- **Friendly names**: `my-api` becomes the `my-api/` folder with an importable `my_api` package.
+- **Same commands every time**: the run command is `uvicorn app.routes:app` in every generated project.
 - **Database ready**: SQLAlchemy and PyMySQL are included so you can connect to MySQL right away.
 
 ## Requirements
@@ -89,7 +89,7 @@ Created FastAPI project: myproject
 Next steps:
   cd myproject
   uv sync
-  uv run uvicorn myproject.main:app --reload
+  uv run uvicorn app.routes:app --reload
 ```
 
 **2. Install dependencies**
@@ -102,7 +102,7 @@ uv sync
 **3. Run the application**
 
 ```bash
-uv run uvicorn myproject.main:app --reload
+uv run uvicorn app.routes:app --reload
 ```
 
 **4. Open it in your browser**
@@ -117,34 +117,53 @@ uv run uvicorn myproject.main:app --reload
 
 ```text
 myproject/
-├── pyproject.toml        # Project metadata and dependencies (FastAPI, Uvicorn, SQLAlchemy, PyMySQL)
-├── .env                  # Environment variables
-├── .gitignore            # Python, uv and tooling ignores
-├── README.md             # How to install and run the project
-└── src/
-    └── myproject/
-        ├── __init__.py
-        ├── main.py       # FastAPI application
-        ├── config.py     # Settings read from environment variables
-        └── database/
-            ├── __init__.py
-            └── connection.py
+├── pyproject.toml                          # Dependencies (FastAPI, Uvicorn, SQLAlchemy, PyMySQL)
+├── .env                                    # Environment variables
+├── .gitignore                              # Python, uv and tooling ignores
+├── README.md                               # How to install and run the project
+└── app/
+    ├── routes.py                           # FastAPI application and routes
+    ├── config.py                           # Settings read from environment variables
+    ├── controller/
+    │   └── home_controller.py              # Handles the default route
+    └── database/
+        ├── connection.py
+        └── 20260922143022_create_users_table.py
 ```
 
-The generated `main.py`:
+Generated projects are applications, not libraries: there is no `[build-system]` and no
+`__init__.py`. `app/` is a namespace package that uvicorn imports from the project root.
+
+Routes stay thin and hand the work to a controller. The generated `app/routes.py`:
 
 ```python
 from fastapi import FastAPI
 
-from . import config
+from app.config import APP_NAME, DEBUG
+from app.controller.home_controller import HomeController
 
-app = FastAPI(title=config.APP_NAME, debug=config.DEBUG)
+app = FastAPI(title=APP_NAME, debug=DEBUG)
+
+home_controller = HomeController()
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": "Hello from FastAPI"}
+    return home_controller.index()
 ```
+
+And `app/controller/home_controller.py`:
+
+```python
+class HomeController:
+    """Handles requests for the application root."""
+
+    def index(self) -> dict[str, str]:
+        return {"message": "Hello from fastapi-foundry"}
+```
+
+Add a controller class per resource in `app/controller/`, and give it a route in
+`app/routes.py`.
 
 ## Configuration
 
@@ -158,27 +177,26 @@ Generated projects read their settings from environment variables in `config.py`
 To load the values from the generated `.env` file, start the server with `--env-file`:
 
 ```bash
-uv run uvicorn myproject.main:app --reload --env-file .env
+uv run uvicorn app.routes:app --reload --env-file .env
 ```
 
 ## Project names
 
-The project name is used for both the folder and the Python package, so it must:
+The project name is used for the folder and the distribution name, so it must:
 
 - start with a letter
 - contain only letters, digits, hyphens (`-`) and underscores (`_`)
 - not be a Python keyword or clash with a standard library or FastAPI module (for example `json` or `fastapi`)
 
-Hyphens are converted for the package name:
-
 ```bash
 uvx fastapi-foundry init my-fastapi-app
 ```
 
-This creates the `my-fastapi-app/` folder containing the `my_fastapi_app` package, which you run with:
+This creates the `my-fastapi-app/` folder. The name does not appear inside the project, so
+the run command is the same as for every other project:
 
 ```bash
-uv run uvicorn my_fastapi_app.main:app --reload
+uv run uvicorn app.routes:app --reload
 ```
 
 If the target folder already exists, fastapi-foundry stops with an error instead of overwriting your files.
@@ -210,14 +228,17 @@ Is this migration for an existing table or a new table?
   2) New table
 Select [1-2]: 2
 What is the name of the table this migration should structure: users
-Created migration: migrations/20260916143022_create_users_table.py
+Created migration: app/database/20260922143022_create_users_table.py
 ```
 
-Migration files are written to a `migrations/` directory at the project root:
+Migration files are written to `app/database/`, alongside the `users` migration that every
+new project ships with:
 
 ```text
-migrations/
-└── 20260916143022_create_users_table.py
+app/database/
+├── connection.py
+├── 20260922143022_create_users_table.py
+└── 20260922143512_create_posts_table.py
 ```
 
 Each file records its table in a `TABLE` constant, which is how the command
