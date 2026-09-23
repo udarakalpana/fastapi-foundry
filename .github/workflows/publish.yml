@@ -35,7 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
-      id-token: write
       contents: read
     steps:
       # pyproject.toml carries the [[tool.uv.index]] entry that --index resolves.
@@ -48,7 +47,9 @@ jobs:
       # --index resolves both the upload URL and the URL checked for existing
       # files from [[tool.uv.index]] in pyproject.toml, so passing --check-url
       # as well is rejected as a conflicting argument.
-      - run: uv publish --index testpypi --trusted-publishing always
+      # TestPyPI authenticates with an API token; PyPI below uses trusted
+      # publishing, so only that job needs an OIDC token.
+      - run: uv publish --index testpypi --token ${{ secrets.TEST_PYPI_API_TOKEN }}
 
   pypi:
     # PyPI only publishes if TestPyPI accepted the same artifacts first.
