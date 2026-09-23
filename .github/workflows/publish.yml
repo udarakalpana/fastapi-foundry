@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish
 
 on:
   push:
@@ -6,11 +6,9 @@ on:
       - "v*"
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
-      id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v7
@@ -25,4 +23,49 @@ jobs:
           fi
       - run: uv run pytest
       - run: uv build
+      # Build once and publish the same files to both indexes, so what lands on
+      # PyPI is byte-identical to what was smoke-tested on TestPyPI.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  test-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      # pyproject.toml carries the [[tool.uv.index]] entry that --index resolves.
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      # --check-url skips files already uploaded, so re-running a failed release
+      # does not block on "file already exists".
+      - run: >-
+          uv publish
+          --index testpypi
+          --trusted-publishing always
+          --check-url https://test.pypi.org/simple/
+
+  pypi:
+    # PyPI only publishes if TestPyPI accepted the same artifacts first.
+    needs: test-pypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
       - run: uv publish --trusted-publishing always
