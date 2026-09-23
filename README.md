@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/udarakalpana/fastapi-foundry/master/assets/fastapi-foundry-logo-transparent.png" alt="fastapi-foundry logo" width="200">
+</p>
+
 # fastapi-foundry
 
 [![PyPI version](https://img.shields.io/pypi/v/fastapi-foundry)](https://pypi.org/project/fastapi-foundry/)
