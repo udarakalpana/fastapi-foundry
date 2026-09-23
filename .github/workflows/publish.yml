@@ -45,13 +45,10 @@ jobs:
         with:
           name: dist
           path: dist/
-      # --check-url skips files already uploaded, so re-running a failed release
-      # does not block on "file already exists".
-      - run: >-
-          uv publish
-          --index testpypi
-          --trusted-publishing always
-          --check-url https://test.pypi.org/simple/
+      # --index resolves both the upload URL and the URL checked for existing
+      # files from [[tool.uv.index]] in pyproject.toml, so passing --check-url
+      # as well is rejected as a conflicting argument.
+      - run: uv publish --index testpypi --trusted-publishing always
 
   pypi:
     # PyPI only publishes if TestPyPI accepted the same artifacts first.
