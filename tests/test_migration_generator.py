@@ -127,45 +127,46 @@ def test_existing_tables_ignores_unrelated_and_broken_files(tmp_path: Path) -> N
 # --- CLI ------------------------------------------------------------------
 
 
-def test_cli_migration_for_a_new_table(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture
+def project_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A directory the migration command accepts as a project root."""
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "routes.py").write_text("")
+    (tmp_path / "pyproject.toml").write_text("")
     monkeypatch.chdir(tmp_path)
+    return tmp_path
 
+
+def test_cli_migration_for_a_new_table(project_dir: Path) -> None:
     result = CliRunner().invoke(app, ["migration"], input="2\nusers\n")
 
     assert result.exit_code == 0, result.output
-    created = list((tmp_path / MIGRATIONS_DIR).glob("*_create_users_table.py"))
+    created = list((project_dir / MIGRATIONS_DIR).glob("*_create_users_table.py"))
     assert len(created) == 1
     assert created[0].name in result.output
 
 
-def test_cli_migration_binds_an_existing_table(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.chdir(tmp_path)
-    create_migration("users", MigrationKind.NEW_TABLE, tmp_path, now=FIXED_NOW)
-    create_migration("posts", MigrationKind.NEW_TABLE, tmp_path, now=FIXED_NOW)
+def test_cli_migration_binds_an_existing_table(project_dir: Path) -> None:
+    create_migration("users", MigrationKind.NEW_TABLE, project_dir, now=FIXED_NOW)
+    create_migration("posts", MigrationKind.NEW_TABLE, project_dir, now=FIXED_NOW)
 
     result = CliRunner().invoke(app, ["migration"], input="1\n2\n")
 
     assert result.exit_code == 0, result.output
     # Tables are listed in sorted order, so option 2 is "users".
     assert "users" in result.output
-    assert list((tmp_path / MIGRATIONS_DIR).glob("*_update_users_table.py"))
+    assert list((project_dir / MIGRATIONS_DIR).glob("*_update_users_table.py"))
 
 
-def test_cli_migration_existing_table_without_any_tables_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
+def test_cli_migration_existing_table_without_any_tables_fails(project_dir: Path) -> None:
     result = CliRunner().invoke(app, ["migration"], input="1\n")
 
     assert result.exit_code == 1
     assert "No existing tables" in result.output
 
 
-def test_cli_migration_reprompts_on_invalid_input(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.chdir(tmp_path)
-
+def test_cli_migration_reprompts_on_invalid_input(project_dir: Path) -> None:
     result = CliRunner().invoke(app, ["migration"], input="9\nx\n2\nuser-roles\nuser_roles\n")
 
     assert result.exit_code == 0, result.output
-    assert list((tmp_path / MIGRATIONS_DIR).glob("*_create_user_roles_table.py"))
+    assert list((project_dir / MIGRATIONS_DIR).glob("*_create_user_roles_table.py"))

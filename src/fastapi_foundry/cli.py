@@ -14,7 +14,9 @@ from fastapi_foundry.generators.migration import (
     MIGRATIONS_DIR,
     InvalidTableNameError,
     MigrationKind,
+    NotAProjectError,
     create_migration,
+    ensure_project_root,
     existing_tables,
     normalize_table_name,
 )
@@ -68,6 +70,13 @@ def init(
 def migration() -> None:
     """Create a migration file in the project's migrations directory."""
     project_root = Path.cwd()
+
+    # Check before prompting, so nothing is asked or written outside a project.
+    try:
+        ensure_project_root(project_root)
+    except NotAProjectError as error:
+        typer.secho(f"Error: {error}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from error
 
     kind = _prompt_migration_kind()
     if kind is MigrationKind.EXISTING_TABLE:

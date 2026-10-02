@@ -284,6 +284,10 @@ Run `fastapi-foundry migration` from the project root to add a migration file:
 uvx fastapi-foundry migration
 ```
 
+Run from anywhere else (an unrelated folder, or a subfolder such as `app/`), it
+stops with an error instead of creating files there. A project root is recognised
+by its `pyproject.toml` and `app/routes.py`.
+
 It asks whether the migration targets an existing table or a new one. For a new
 table it asks for the table name; for an existing table it lists the tables
 earlier migrations already cover so you can pick one.

@@ -16,6 +16,10 @@ from fastapi_foundry.generators import templates
 
 MIGRATIONS_DIR = Path("app", "database")
 
+# Files every generated project has at its root. Their presence is how a
+# directory is recognised as a project root before anything is written to it.
+_PROJECT_MARKERS = (Path("pyproject.toml"), Path("app", "routes.py"))
+
 # Unquoted SQL identifier rules, restricted further so the name is also safe to
 # use in a filename: no path separators, dots or spaces.
 _VALID_TABLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
@@ -28,6 +32,10 @@ _TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
 class InvalidTableNameError(ValueError):
     """Raised when a table name cannot be used safely."""
+
+
+class NotAProjectError(Exception):
+    """Raised when a directory is not the root of a generated project."""
 
 
 class MigrationKind(str, Enum):
@@ -59,6 +67,21 @@ def normalize_table_name(raw_name: str) -> str:
             f"Table name '{raw_name}' is longer than {_MAX_TABLE_NAME_LENGTH} characters."
         )
     return name.lower()
+
+
+def ensure_project_root(project_root: Path | None = None) -> None:
+    """Check that ``project_root`` is the root of a generated project.
+
+    Raises:
+        NotAProjectError: if any of the project's marker files is missing.
+    """
+    root = project_root or Path.cwd()
+    missing = [str(marker) for marker in _PROJECT_MARKERS if not (root / marker).is_file()]
+    if missing:
+        raise NotAProjectError(
+            f"'{root}' is not a fastapi-foundry project (missing: {', '.join(missing)}). "
+            "Run this command from your project's root folder."
+        )
 
 
 def migrations_dir(project_root: Path | None = None) -> Path:
