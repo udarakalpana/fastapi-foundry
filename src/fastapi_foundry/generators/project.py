@@ -108,11 +108,15 @@ def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
         project_root / "pyproject.toml": templates.pyproject_toml(
             project_name.distribution
         ),
-        project_root / ".env": templates.env_file(project_name.distribution),
+        project_root / ".env": templates.env_file(
+            project_name.distribution, project_name.package
+        ),
         project_root / ".gitignore": templates.GITIGNORE,
         project_root / "README.md": templates.readme(project_name.directory),
         app_dir / "routes.py": templates.ROUTES_PY,
-        app_dir / "config.py": templates.config_py(project_name.distribution),
+        app_dir / "config.py": templates.config_py(
+            project_name.distribution, project_name.package
+        ),
         app_dir / "controller" / "home_controller.py": templates.HOME_CONTROLLER_PY,
         app_dir / "database" / "connection.py": templates.DATABASE_CONNECTION_PY,
     }

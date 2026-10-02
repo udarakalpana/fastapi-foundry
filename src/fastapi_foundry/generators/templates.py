@@ -11,6 +11,9 @@ UVICORN_VERSION = "0.53.0"
 SQLALCHEMY_VERSION = "2.0.54"
 PYMYSQL_VERSION = "1.2.0"
 
+# Points at a local MySQL server; projects override it with DATABASE_URL.
+_DEFAULT_DATABASE_URL = Template("mysql+pymysql://root:@127.0.0.1:3306/$database")
+
 _PYPROJECT_TOML = Template("""\
 [project]
 name = "$distribution"
@@ -33,6 +36,7 @@ package = false
 _ENV_FILE = Template('''\
 APP_NAME=$distribution
 DEBUG=false
+DATABASE_URL=$database_url
 ''')
 
 GITIGNORE = '''\
@@ -73,6 +77,31 @@ uv run uvicorn app.routes:app --reload
 ```
 
 To load settings from `.env`, add `--env-file .env`.
+
+## Database
+
+`app/database/connection.py` connects with SQLAlchemy to the URL in `DATABASE_URL`
+(MySQL via PyMySQL by default). Update it in `.env` with your own credentials:
+
+```text
+DATABASE_URL=mysql+pymysql://<user>:<password>@<host>:3306/<database>
+```
+
+Use `get_db` as a FastAPI dependency to get a session per request:
+
+```python
+from typing import Annotated
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from app.database.connection import get_db
+
+
+@app.get("/items")
+def list_items(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    ...
+```
 
 ## URLs
 
@@ -117,6 +146,7 @@ import os
 
 APP_NAME: str = os.getenv("APP_NAME", "$distribution")
 DEBUG: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
+DATABASE_URL: str = os.getenv("DATABASE_URL", "$database_url")
 ''')
 
 _MIGRATION_PY = Template('''\
@@ -135,10 +165,26 @@ def downgrade() -> None:
 ''')
 
 DATABASE_CONNECTION_PY = '''\
-"""Database connection setup.
+"""Database connection setup."""
 
-Intentionally empty: the database layer will be added in a later phase.
-"""
+from collections.abc import Iterator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.config import DATABASE_URL, DEBUG
+
+# Connections are opened lazily, so the app starts even if the database is down.
+# pool_pre_ping replaces connections the server has dropped while idle.
+engine = create_engine(DATABASE_URL, echo=DEBUG, pool_pre_ping=True)
+
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def get_db() -> Iterator[Session]:
+    """Yield a session for one request and close it when the request ends."""
+    with SessionLocal() as session:
+        yield session
 '''
 
 
@@ -152,16 +198,24 @@ def pyproject_toml(distribution: str) -> str:
     )
 
 
-def env_file(distribution: str) -> str:
-    return _ENV_FILE.substitute(distribution=distribution)
+def env_file(distribution: str, database: str) -> str:
+    return _ENV_FILE.substitute(
+        distribution=distribution, database_url=default_database_url(database)
+    )
 
 
 def readme(directory: str) -> str:
     return _README.substitute(directory=directory)
 
 
-def config_py(distribution: str) -> str:
-    return _CONFIG_PY.substitute(distribution=distribution)
+def config_py(distribution: str, database: str) -> str:
+    return _CONFIG_PY.substitute(
+        distribution=distribution, database_url=default_database_url(database)
+    )
+
+
+def default_database_url(database: str) -> str:
+    return _DEFAULT_DATABASE_URL.substitute(database=database)
 
 
 def migration_py(table: str, summary: str) -> str:
