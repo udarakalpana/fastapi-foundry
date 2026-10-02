@@ -67,7 +67,7 @@ def test_config_defines_database_url(tmp_path: Path) -> None:
     ("project", "database"),
     [("myproject", "myproject"), ("my-fastapi-app", "my_fastapi_app")],
 )
-def test_env_file_defines_a_mysql_database_url(
+def test_env_file_defines_a_mysql_database(
     tmp_path: Path, project: str, database: str
 ) -> None:
     project_root = create_project(project, parent_dir=tmp_path)
@@ -75,8 +75,8 @@ def test_env_file_defines_a_mysql_database_url(
     env_lines = (project_root / ".env").read_text().splitlines()
     values = dict(line.split("=", 1) for line in env_lines if "=" in line)
 
-    assert values["DATABASE_URL"].startswith("mysql+pymysql://")
-    assert values["DATABASE_URL"].endswith(f"/{database}")
+    assert values["DB_CONNECTION"] == "mysql+pymysql"
+    assert values["DB_DATABASE"] == database
 
 
 def test_generated_readme_documents_database_url(tmp_path: Path) -> None:

@@ -26,7 +26,7 @@ uvx fastapi-foundry init myproject
 - **Structured by default**: routes in `app/routes.py` delegating to controller classes in `app/controller/`.
 - **Safe by default**: never overwrites an existing directory and rejects unsafe project names.
 - **Same commands every time**: the run command is `uvicorn app.routes:app` in every generated project.
-- **Database ready**: a SQLAlchemy engine and a `get_db` session dependency, connecting to MySQL through PyMySQL.
+- **Database ready**: a SQLAlchemy engine and a `get_db` session dependency, connecting to MySQL through PyMySQL with credentials from `.env`.
 
 ## Requirements
 
@@ -129,7 +129,7 @@ myproject/
     ├── routes.py                           # FastAPI application and routes
     ├── config/
     │   ├── app.py                          # APP_NAME and DEBUG
-    │   ├── database.py                     # DATABASE_URL
+    │   ├── database.py                     # DB_* settings and the DATABASE_URL built from them
     │   └── sqlalchemy_connection.py        # SQLAlchemy engine, SessionLocal and get_db
     ├── controller/
     │   └── home_controller.py              # Handles the default route
@@ -180,7 +180,13 @@ kind of configuration in `app/config/`:
 |---|---|---|---|
 | `APP_NAME` | `app/config/app.py` | project name | Title shown in the API docs |
 | `DEBUG` | `app/config/app.py` | `false` | Enables FastAPI debug mode (`true`, `1` or `yes`) and SQL logging |
-| `DATABASE_URL` | `app/config/database.py` | `mysql+pymysql://root:@127.0.0.1:3306/<project>` | SQLAlchemy URL used by `app/config/sqlalchemy_connection.py` |
+| `DB_CONNECTION` | `app/config/database.py` | `mysql+pymysql` | SQLAlchemy dialect and driver |
+| `DB_HOST` | `app/config/database.py` | `127.0.0.1` | Database server host |
+| `DB_PORT` | `app/config/database.py` | `3306` | Database server port |
+| `DB_DATABASE` | `app/config/database.py` | project name in snake_case | Database name |
+| `DB_USERNAME` | `app/config/database.py` | `root` | Database user |
+| `DB_PASSWORD` | `app/config/database.py` | empty | Database password |
+| `DATABASE_URL` | `app/config/database.py` | built from the `DB_*` settings | Optional complete SQLAlchemy URL; overrides the `DB_*` settings when set |
 
 Add new settings to the module they belong to, or create a new module in `app/config/`
 for a new kind of configuration.
@@ -193,14 +199,24 @@ uv run uvicorn app.routes:app --reload --env-file .env
 
 ## Database connection
 
-`app/config/sqlalchemy_connection.py` creates the SQLAlchemy engine from `DATABASE_URL` and
-provides `get_db`, a dependency that opens one session per request and closes it
-afterwards. The default database name is the project name in snake_case
-(`my-fastapi-app` → `my_fastapi_app`). Set your own credentials in `.env`:
+`app/config/database.py` builds `DATABASE_URL` from the `DB_*` settings, and
+`app/config/sqlalchemy_connection.py` creates the SQLAlchemy engine from it and provides
+`get_db`, a dependency that opens one session per request and closes it afterwards. The
+default database name is the project name in snake_case (`my-fastapi-app` →
+`my_fastapi_app`). Set your own credentials in `.env`:
 
 ```text
-DATABASE_URL=mysql+pymysql://<user>:<password>@<host>:3306/<database>
+DB_CONNECTION=mysql+pymysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=my_fastapi_app
+DB_USERNAME=<user>
+DB_PASSWORD=<password>
 ```
+
+The URL is built with SQLAlchemy's `URL.create`, so special characters such as `@`, `:` or
+`/` in the username or password need no escaping. To supply a complete URL instead (for
+example in Docker or CI), set `DATABASE_URL`; it takes precedence over the `DB_*` settings.
 
 ```python
 from typing import Annotated

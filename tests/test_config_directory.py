@@ -62,7 +62,15 @@ def test_old_config_and_connection_modules_are_not_generated(tmp_path: Path) -> 
 
 
 def test_database_config_holds_only_database_settings(config_dir: Path) -> None:
-    assert _top_level_names(config_dir / "database.py") == {"DATABASE_URL"}
+    assert _top_level_names(config_dir / "database.py") == {
+        "DB_CONNECTION",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_DATABASE",
+        "DB_USERNAME",
+        "DB_PASSWORD",
+        "DATABASE_URL",
+    }
 
 
 def test_app_config_holds_only_application_settings(config_dir: Path) -> None:

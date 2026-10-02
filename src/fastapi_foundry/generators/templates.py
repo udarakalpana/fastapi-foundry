@@ -11,8 +11,12 @@ UVICORN_VERSION = "0.53.0"
 SQLALCHEMY_VERSION = "2.0.54"
 PYMYSQL_VERSION = "1.2.0"
 
-# Points at a local MySQL server; projects override it with DATABASE_URL.
-_DEFAULT_DATABASE_URL = Template("mysql+pymysql://root:@127.0.0.1:3306/$database")
+# Points at a local MySQL server; projects change these through the DB_* variables.
+DEFAULT_DB_CONNECTION = "mysql+pymysql"
+DEFAULT_DB_HOST = "127.0.0.1"
+DEFAULT_DB_PORT = 3306
+DEFAULT_DB_USERNAME = "root"
+DEFAULT_DB_PASSWORD = ""
 
 _PYPROJECT_TOML = Template("""\
 [project]
@@ -36,7 +40,12 @@ package = false
 _ENV_FILE = Template('''\
 APP_NAME=$distribution
 DEBUG=false
-DATABASE_URL=$database_url
+DB_CONNECTION=$connection
+DB_HOST=$host
+DB_PORT=$port
+DB_DATABASE=$database
+DB_USERNAME=$username
+DB_PASSWORD=$password
 ''')
 
 GITIGNORE = '''\
@@ -80,12 +89,20 @@ To load settings from `.env`, add `--env-file .env`.
 
 ## Database
 
-`app/config/sqlalchemy_connection.py` connects with SQLAlchemy to the URL in `DATABASE_URL`
-(MySQL via PyMySQL by default). Update it in `.env` with your own credentials:
+`app/config/database.py` builds the SQLAlchemy URL from the `DB_*` settings in `.env`
+(MySQL via PyMySQL by default). Update them with your own credentials:
 
 ```text
-DATABASE_URL=mysql+pymysql://<user>:<password>@<host>:3306/<database>
+DB_CONNECTION=mysql+pymysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=<database>
+DB_USERNAME=<user>
+DB_PASSWORD=<password>
 ```
+
+Special characters in the username or password need no escaping. To use a complete
+URL instead, set `DATABASE_URL`; it takes precedence over the `DB_*` settings.
 
 Use `get_db` as a FastAPI dependency to get a session per request:
 
@@ -153,7 +170,25 @@ _DATABASE_CONFIG_PY = Template('''\
 
 import os
 
-DATABASE_URL: str = os.getenv("DATABASE_URL", "$database_url")
+from sqlalchemy.engine import URL
+
+DB_CONNECTION: str = os.getenv("DB_CONNECTION", "$connection")
+DB_HOST: str = os.getenv("DB_HOST", "$host")
+DB_PORT: int = int(os.getenv("DB_PORT", "$port"))
+DB_DATABASE: str = os.getenv("DB_DATABASE", "$database")
+DB_USERNAME: str = os.getenv("DB_USERNAME", "$username")
+DB_PASSWORD: str = os.getenv("DB_PASSWORD", "$password")
+
+# URL.create escapes special characters in the username and password.
+# A complete DATABASE_URL, if set, takes precedence over the DB_* settings.
+DATABASE_URL: str = os.getenv("DATABASE_URL") or URL.create(
+    drivername=DB_CONNECTION,
+    username=DB_USERNAME,
+    password=DB_PASSWORD,
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_DATABASE,
+).render_as_string(hide_password=False)
 ''')
 
 _MIGRATION_PY = Template('''\
@@ -207,9 +242,7 @@ def pyproject_toml(distribution: str) -> str:
 
 
 def env_file(distribution: str, database: str) -> str:
-    return _ENV_FILE.substitute(
-        distribution=distribution, database_url=default_database_url(database)
-    )
+    return _ENV_FILE.substitute(distribution=distribution, **_db_settings(database))
 
 
 def readme(directory: str) -> str:
@@ -221,11 +254,19 @@ def app_config_py(distribution: str) -> str:
 
 
 def database_config_py(database: str) -> str:
-    return _DATABASE_CONFIG_PY.substitute(database_url=default_database_url(database))
+    return _DATABASE_CONFIG_PY.substitute(**_db_settings(database))
 
 
-def default_database_url(database: str) -> str:
-    return _DEFAULT_DATABASE_URL.substitute(database=database)
+def _db_settings(database: str) -> dict[str, object]:
+    """Default DB_* values, shared by .env and app/config/database.py."""
+    return {
+        "connection": DEFAULT_DB_CONNECTION,
+        "host": DEFAULT_DB_HOST,
+        "port": DEFAULT_DB_PORT,
+        "database": database,
+        "username": DEFAULT_DB_USERNAME,
+        "password": DEFAULT_DB_PASSWORD,
+    }
 
 
 def migration_py(table: str, summary: str) -> str:
