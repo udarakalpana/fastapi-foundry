@@ -26,7 +26,7 @@ uvx fastapi-foundry init myproject
 - **Structured by default**: routes in `app/routes.py` delegating to controller classes in `app/controller/`.
 - **Safe by default**: never overwrites an existing directory and rejects unsafe project names.
 - **Same commands every time**: the run command is `uvicorn app.routes:app` in every generated project.
-- **Database ready**: SQLAlchemy and PyMySQL are included so you can connect to MySQL right away.
+- **Database ready**: a SQLAlchemy engine and a `get_db` session dependency, connecting to MySQL through PyMySQL.
 
 ## Requirements
 
@@ -131,7 +131,7 @@ myproject/
     ├── controller/
     │   └── home_controller.py              # Handles the default route
     └── database/
-        ├── connection.py
+        ├── connection.py                   # SQLAlchemy engine, SessionLocal and get_db
         └── 20260922143022_create_users_table.py
 ```
 
@@ -176,13 +176,42 @@ Generated projects read their settings from environment variables in `config.py`
 | Variable | Default | Description |
 |---|---|---|
 | `APP_NAME` | project name | Title shown in the API docs |
-| `DEBUG` | `false` | Enables FastAPI debug mode (`true`, `1` or `yes`) |
+| `DEBUG` | `false` | Enables FastAPI debug mode (`true`, `1` or `yes`) and SQL logging |
+| `DATABASE_URL` | `mysql+pymysql://root:@127.0.0.1:3306/<project>` | SQLAlchemy URL used by `app/database/connection.py` |
 
 To load the values from the generated `.env` file, start the server with `--env-file`:
 
 ```bash
 uv run uvicorn app.routes:app --reload --env-file .env
 ```
+
+## Database connection
+
+`app/database/connection.py` creates the SQLAlchemy engine from `DATABASE_URL` and
+provides `get_db`, a dependency that opens one session per request and closes it
+afterwards. The default database name is the project name in snake_case
+(`my-fastapi-app` → `my_fastapi_app`). Set your own credentials in `.env`:
+
+```text
+DATABASE_URL=mysql+pymysql://<user>:<password>@<host>:3306/<database>
+```
+
+```python
+from typing import Annotated
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from app.database.connection import get_db
+
+
+@app.get("/items")
+def list_items(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    ...
+```
+
+The engine connects lazily, so the app starts even when the database is not reachable;
+the first request that uses `get_db` is what opens a connection.
 
 ## Project names
 
@@ -269,7 +298,7 @@ does not run migrations yet.
 
 fastapi-foundry is in early development. Planned features include:
 
-- Database setup with SQLAlchemy and Alembic migrations
+- Running migrations with Alembic
 - Settings management with Pydantic Settings
 - Generators for models and routes
 - Authentication scaffolding
