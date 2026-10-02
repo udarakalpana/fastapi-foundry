@@ -92,8 +92,9 @@ def migrations_dir(project_root: Path | None = None) -> Path:
 def existing_tables(project_root: Path | None = None) -> list[str]:
     """Return the sorted table names covered by existing migrations.
 
-    Files that are not migrations, or that no longer parse because they were
-    hand-edited, are skipped rather than failing the whole listing.
+    Files that are not migrations, that no longer parse, or whose hand-edited
+    ``TABLE`` is not a valid table name are skipped rather than failing the
+    whole listing, so every name returned can be passed to :func:`create_migration`.
     """
     directory = migrations_dir(project_root)
     if not directory.is_dir():
@@ -102,8 +103,12 @@ def existing_tables(project_root: Path | None = None) -> list[str]:
     tables: set[str] = set()
     for migration_file in directory.glob("*.py"):
         table = _read_table_constant(migration_file)
-        if table is not None:
-            tables.add(table)
+        if table is None:
+            continue
+        try:
+            tables.add(normalize_table_name(table))
+        except InvalidTableNameError:
+            continue
     return sorted(tables)
 
 

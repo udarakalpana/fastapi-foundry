@@ -311,7 +311,9 @@ app/database/
 ```
 
 Each file records its table in a `TABLE` constant, which is how the command
-lists existing tables. No database connection is needed.
+lists existing tables. No database connection is needed. If you edit a `TABLE`
+value by hand, keep it a valid table name; files with invalid names are left
+out of the list.
 
 ```python
 """Create table 'users'."""
