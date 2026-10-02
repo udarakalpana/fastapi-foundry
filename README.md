@@ -273,7 +273,7 @@ If the target folder already exists, fastapi-foundry stops with an error instead
 fastapi-foundry --help          # Show available commands
 fastapi-foundry init --help     # Show help for the init command
 fastapi-foundry init <name>     # Create a new project in the current directory
-fastapi-foundry migration       # Create a migration file in ./migrations
+fastapi-foundry migration       # Create a migration file in ./app/database
 ```
 
 ## Migrations
