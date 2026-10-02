@@ -21,10 +21,11 @@ EXPECTED_FILES = [
     ".env",
     ".gitignore",
     "README.md",
-    "app/config.py",
+    "app/config/app.py",
+    "app/config/database.py",
     "app/routes.py",
     "app/controller/home_controller.py",
-    "app/database/connection.py",
+    "app/config/sqlalchemy_connection.py",
 ]
 
 
@@ -159,7 +160,7 @@ def test_default_users_migration_is_generated(tmp_path: Path) -> None:
 def test_default_migration_is_discoverable_by_the_migration_command(tmp_path: Path) -> None:
     project_root = create_project("myproject", parent_dir=tmp_path)
 
-    # connection.py shares the directory and must not confuse the scanner.
+    # Only migrations live here; the scanner must still find exactly one table.
     assert existing_tables(project_root) == ["users"]
 
 

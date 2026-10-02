@@ -103,6 +103,7 @@ def create_project(name: str | ProjectName, parent_dir: Path | None = None) -> P
 
 def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
     app_dir = project_root / "app"
+    config_dir = app_dir / "config"
 
     files: dict[Path, str] = {
         project_root / "pyproject.toml": templates.pyproject_toml(
@@ -114,11 +115,10 @@ def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
         project_root / ".gitignore": templates.GITIGNORE,
         project_root / "README.md": templates.readme(project_name.directory),
         app_dir / "routes.py": templates.ROUTES_PY,
-        app_dir / "config.py": templates.config_py(
-            project_name.distribution, project_name.package
-        ),
+        config_dir / "app.py": templates.app_config_py(project_name.distribution),
+        config_dir / "database.py": templates.database_config_py(project_name.package),
+        config_dir / "sqlalchemy_connection.py": templates.SQLALCHEMY_CONNECTION_PY,
         app_dir / "controller" / "home_controller.py": templates.HOME_CONTROLLER_PY,
-        app_dir / "database" / "connection.py": templates.DATABASE_CONNECTION_PY,
     }
 
     for file_path, content in files.items():

@@ -1,4 +1,4 @@
-"""Tests for the SQLAlchemy connection that ``init`` writes to app/database/connection.py."""
+"""Tests for the SQLAlchemy connection that ``init`` writes to app/config/sqlalchemy_connection.py."""
 
 import ast
 import os
@@ -52,7 +52,7 @@ def _run_in_project(
 def test_connection_module_defines_engine_session_factory_and_get_db(tmp_path: Path) -> None:
     project_root = create_project("myproject", parent_dir=tmp_path)
 
-    names = _top_level_names(project_root / "app" / "database" / "connection.py")
+    names = _top_level_names(project_root / "app" / "config" / "sqlalchemy_connection.py")
 
     assert {"engine", "SessionLocal", "get_db"} <= names
 
@@ -60,7 +60,7 @@ def test_connection_module_defines_engine_session_factory_and_get_db(tmp_path: P
 def test_config_defines_database_url(tmp_path: Path) -> None:
     project_root = create_project("myproject", parent_dir=tmp_path)
 
-    assert "DATABASE_URL" in _top_level_names(project_root / "app" / "config.py")
+    assert "DATABASE_URL" in _top_level_names(project_root / "app" / "config" / "database.py")
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_default_engine_targets_mysql_without_connecting(
     # No MySQL server runs here, so this also proves that importing the module
     # (and so starting the app) does not open a connection.
     script = (
-        "from app.database.connection import engine\n"
+        "from app.config.sqlalchemy_connection import engine\n"
         "print(engine.url.drivername)\n"
         "print(engine.url.database)\n"
     )
@@ -115,7 +115,7 @@ def test_engine_uses_database_url_from_the_environment(tmp_path: Path) -> None:
     database_url = f"sqlite:///{tmp_path / 'override.db'}"
 
     script = (
-        "from app.database.connection import engine\n"
+        "from app.config.sqlalchemy_connection import engine\n"
         "print(engine.url.render_as_string(hide_password=False))\n"
     )
     result = _run_in_project(project_root, script, database_url=database_url)
@@ -130,7 +130,7 @@ def test_get_db_yields_a_working_session_and_closes_it(tmp_path: Path) -> None:
     script = (
         "from sqlalchemy import text\n"
         "from sqlalchemy.orm import Session\n"
-        "from app.database.connection import get_db\n"
+        "from app.config.sqlalchemy_connection import get_db\n"
         "dependency = get_db()\n"
         "session = next(dependency)\n"
         "assert isinstance(session, Session), type(session)\n"
@@ -158,7 +158,7 @@ def test_get_db_works_as_a_fastapi_dependency(tmp_path: Path) -> None:
         "from fastapi.testclient import TestClient\n"
         "from sqlalchemy import text\n"
         "from sqlalchemy.orm import Session\n"
-        "from app.database.connection import get_db\n"
+        "from app.config.sqlalchemy_connection import get_db\n"
         "from app.routes import app\n"
         "@app.get('/db-check')\n"
         "def db_check(db: Annotated[Session, Depends(get_db)]) -> dict[str, int]:\n"

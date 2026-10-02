@@ -80,7 +80,7 @@ To load settings from `.env`, add `--env-file .env`.
 
 ## Database
 
-`app/database/connection.py` connects with SQLAlchemy to the URL in `DATABASE_URL`
+`app/config/sqlalchemy_connection.py` connects with SQLAlchemy to the URL in `DATABASE_URL`
 (MySQL via PyMySQL by default). Update it in `.env` with your own credentials:
 
 ```text
@@ -95,7 +95,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.database.connection import get_db
+from app.config.sqlalchemy_connection import get_db
 
 
 @app.get("/items")
@@ -115,7 +115,7 @@ ROUTES_PY = '''\
 
 from fastapi import FastAPI
 
-from app.config import APP_NAME, DEBUG
+from app.config.app import APP_NAME, DEBUG
 from app.controller.home_controller import HomeController
 
 app = FastAPI(title=APP_NAME, debug=DEBUG)
@@ -139,13 +139,20 @@ class HomeController:
         return {"message": "Hello from fastapi-foundry"}
 '''
 
-_CONFIG_PY = Template('''\
+_APP_CONFIG_PY = Template('''\
 """Application configuration read from environment variables."""
 
 import os
 
 APP_NAME: str = os.getenv("APP_NAME", "$distribution")
 DEBUG: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
+''')
+
+_DATABASE_CONFIG_PY = Template('''\
+"""Database configuration read from environment variables."""
+
+import os
+
 DATABASE_URL: str = os.getenv("DATABASE_URL", "$database_url")
 ''')
 
@@ -164,15 +171,16 @@ def downgrade() -> None:
     """Revert this migration."""
 ''')
 
-DATABASE_CONNECTION_PY = '''\
-"""Database connection setup."""
+SQLALCHEMY_CONNECTION_PY = '''\
+"""SQLAlchemy engine and per-request sessions."""
 
 from collections.abc import Iterator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.config import DATABASE_URL, DEBUG
+from app.config.app import DEBUG
+from app.config.database import DATABASE_URL
 
 # Connections are opened lazily, so the app starts even if the database is down.
 # pool_pre_ping replaces connections the server has dropped while idle.
@@ -208,10 +216,12 @@ def readme(directory: str) -> str:
     return _README.substitute(directory=directory)
 
 
-def config_py(distribution: str, database: str) -> str:
-    return _CONFIG_PY.substitute(
-        distribution=distribution, database_url=default_database_url(database)
-    )
+def app_config_py(distribution: str) -> str:
+    return _APP_CONFIG_PY.substitute(distribution=distribution)
+
+
+def database_config_py(database: str) -> str:
+    return _DATABASE_CONFIG_PY.substitute(database_url=default_database_url(database))
 
 
 def default_database_url(database: str) -> str:

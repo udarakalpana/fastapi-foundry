@@ -127,11 +127,13 @@ myproject/
 ├── README.md                               # How to install and run the project
 └── app/
     ├── routes.py                           # FastAPI application and routes
-    ├── config.py                           # Settings read from environment variables
+    ├── config/
+    │   ├── app.py                          # APP_NAME and DEBUG
+    │   ├── database.py                     # DATABASE_URL
+    │   └── sqlalchemy_connection.py        # SQLAlchemy engine, SessionLocal and get_db
     ├── controller/
     │   └── home_controller.py              # Handles the default route
     └── database/
-        ├── connection.py                   # SQLAlchemy engine, SessionLocal and get_db
         └── 20260922143022_create_users_table.py
 ```
 
@@ -143,7 +145,7 @@ Routes stay thin and hand the work to a controller. The generated `app/routes.py
 ```python
 from fastapi import FastAPI
 
-from app.config import APP_NAME, DEBUG
+from app.config.app import APP_NAME, DEBUG
 from app.controller.home_controller import HomeController
 
 app = FastAPI(title=APP_NAME, debug=DEBUG)
@@ -171,13 +173,17 @@ Add a controller class per resource in `app/controller/`, and give it a route in
 
 ## Configuration
 
-Generated projects read their settings from environment variables in `config.py`:
+Generated projects read their settings from environment variables, with one module per
+kind of configuration in `app/config/`:
 
-| Variable | Default | Description |
-|---|---|---|
-| `APP_NAME` | project name | Title shown in the API docs |
-| `DEBUG` | `false` | Enables FastAPI debug mode (`true`, `1` or `yes`) and SQL logging |
-| `DATABASE_URL` | `mysql+pymysql://root:@127.0.0.1:3306/<project>` | SQLAlchemy URL used by `app/database/connection.py` |
+| Variable | Module | Default | Description |
+|---|---|---|---|
+| `APP_NAME` | `app/config/app.py` | project name | Title shown in the API docs |
+| `DEBUG` | `app/config/app.py` | `false` | Enables FastAPI debug mode (`true`, `1` or `yes`) and SQL logging |
+| `DATABASE_URL` | `app/config/database.py` | `mysql+pymysql://root:@127.0.0.1:3306/<project>` | SQLAlchemy URL used by `app/config/sqlalchemy_connection.py` |
+
+Add new settings to the module they belong to, or create a new module in `app/config/`
+for a new kind of configuration.
 
 To load the values from the generated `.env` file, start the server with `--env-file`:
 
@@ -187,7 +193,7 @@ uv run uvicorn app.routes:app --reload --env-file .env
 
 ## Database connection
 
-`app/database/connection.py` creates the SQLAlchemy engine from `DATABASE_URL` and
+`app/config/sqlalchemy_connection.py` creates the SQLAlchemy engine from `DATABASE_URL` and
 provides `get_db`, a dependency that opens one session per request and closes it
 afterwards. The default database name is the project name in snake_case
 (`my-fastapi-app` → `my_fastapi_app`). Set your own credentials in `.env`:
@@ -202,7 +208,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.database.connection import get_db
+from app.config.sqlalchemy_connection import get_db
 
 
 @app.get("/items")
@@ -269,7 +275,6 @@ new project ships with:
 
 ```text
 app/database/
-├── connection.py
 ├── 20260922143022_create_users_table.py
 └── 20260922143512_create_posts_table.py
 ```
