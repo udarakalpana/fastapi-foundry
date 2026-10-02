@@ -104,14 +104,15 @@ def create_project(name: str | ProjectName, parent_dir: Path | None = None) -> P
 def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
     app_dir = project_root / "app"
     config_dir = app_dir / "config"
+    env = templates.env_file(project_name.distribution, project_name.package)
 
     files: dict[Path, str] = {
         project_root / "pyproject.toml": templates.pyproject_toml(
             project_name.distribution
         ),
-        project_root / ".env": templates.env_file(
-            project_name.distribution, project_name.package
-        ),
+        project_root / ".env": env,
+        # Committed copy of .env (which is git-ignored) listing the keys to set.
+        project_root / ".env.example": env,
         project_root / ".gitignore": templates.GITIGNORE,
         project_root / "README.md": templates.readme(project_name.directory),
         app_dir / "routes.py": templates.ROUTES_PY,

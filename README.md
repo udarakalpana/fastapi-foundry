@@ -122,7 +122,8 @@ uv run uvicorn app.routes:app --reload
 ```text
 myproject/
 ├── pyproject.toml                          # Dependencies (FastAPI, Uvicorn, SQLAlchemy, PyMySQL)
-├── .env                                    # Environment variables
+├── .env                                    # Your local environment variables (git-ignored)
+├── .env.example                            # The same keys, committed for other developers
 ├── .gitignore                              # Python, uv and tooling ignores
 ├── README.md                               # How to install and run the project
 └── app/
@@ -196,6 +197,16 @@ To load the values from the generated `.env` file, start the server with `--env-
 ```bash
 uv run uvicorn app.routes:app --reload --env-file .env
 ```
+
+`.env` is git-ignored because it holds your own credentials. Every project also gets a
+`.env.example` with the same keys and defaults, which is committed, so a developer who
+clones the project creates their `.env` from it instead of guessing the key names:
+
+```bash
+cp .env.example .env
+```
+
+When you add a setting, add its key to `.env.example` as well.
 
 ## Database connection
 

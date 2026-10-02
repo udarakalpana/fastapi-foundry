@@ -79,6 +79,17 @@ A FastAPI application.
 uv sync
 ```
 
+## Configure the environment
+
+`.env` holds your local settings and is not committed. `.env.example` lists the same keys
+and is committed, so after cloning the project create your own `.env` from it:
+
+```bash
+cp .env.example .env
+```
+
+When you add a setting, add its key to `.env.example` too.
+
 ## Run the application
 
 ```bash
