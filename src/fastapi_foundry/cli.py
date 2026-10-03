@@ -26,6 +26,12 @@ from fastapi_foundry.generators.project import (
     ProjectName,
     create_project,
 )
+from fastapi_foundry.runner import (
+    MigratorAction,
+    MigratorNotFoundError,
+    UvNotFoundError,
+    run_migrator,
+)
 
 app = typer.Typer(
     help="Scaffold FastAPI projects.",
@@ -90,6 +96,36 @@ def migration() -> None:
         f"Created migration: {migration_path.relative_to(project_root)}",
         fg=typer.colors.GREEN,
     )
+
+
+@app.command()
+def migrate() -> None:
+    """Apply the project's pending migrations to the database."""
+    _run_migrator(MigratorAction.MIGRATE)
+
+
+@app.command("migrate:rollback")
+def migrate_rollback() -> None:
+    """Revert the last batch of migrations."""
+    _run_migrator(MigratorAction.ROLLBACK)
+
+
+@app.command("migrate:status")
+def migrate_status() -> None:
+    """List the project's migrations and whether each has run."""
+    _run_migrator(MigratorAction.STATUS)
+
+
+def _run_migrator(action: MigratorAction) -> None:
+    """Run the project's migration runner, exiting with its exit code."""
+    try:
+        exit_code = run_migrator(action, Path.cwd())
+    except (NotAProjectError, MigratorNotFoundError, UvNotFoundError) as error:
+        typer.secho(f"Error: {error}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from error
+
+    if exit_code != 0:
+        raise typer.Exit(code=exit_code)
 
 
 def _prompt_migration_kind() -> MigrationKind:

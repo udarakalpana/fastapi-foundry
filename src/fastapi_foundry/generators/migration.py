@@ -130,7 +130,10 @@ def create_migration(
     directory.mkdir(parents=True, exist_ok=True)
 
     summary = f"{kind.verb.capitalize()} table '{table}'."
-    content = templates.migration_py(table, summary)
+    if kind is MigrationKind.NEW_TABLE:
+        content = templates.create_table_migration_py(table, summary)
+    else:
+        content = templates.update_table_migration_py(table, summary)
     stem = f"{timestamp}_{kind.verb}_{table}_table"
 
     # "x" mode never overwrites, so a name taken within the same second is

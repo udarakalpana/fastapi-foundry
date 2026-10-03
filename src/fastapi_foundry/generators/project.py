@@ -120,6 +120,10 @@ def _write_project_files(project_root: Path, project_name: ProjectName) -> None:
         config_dir / "database.py": templates.database_config_py(project_name.package),
         config_dir / "sqlalchemy_connection.py": templates.SQLALCHEMY_CONNECTION_PY,
         app_dir / "controller" / "home_controller.py": templates.HOME_CONTROLLER_PY,
+        # schema.py is what migrations change the database with; migrator.py
+        # applies them (`fastapi-foundry migrate` runs it).
+        app_dir / "database" / "schema.py": templates.SCHEMA_PY,
+        app_dir / "database" / "migrator.py": templates.MIGRATOR_PY,
     }
 
     for file_path, content in files.items():
