@@ -11,6 +11,7 @@ from fastapi_foundry.cli.commands.migrations.migrate import migrate
 from fastapi_foundry.cli.commands.migrations.migrate_rollback import migrate_rollback
 from fastapi_foundry.cli.commands.migrations.migrate_status import migrate_status
 from fastapi_foundry.cli.commands.migrations.migration import migration
+from fastapi_foundry.cli.commands.models.model import model
 from fastapi_foundry.cli.commands.project.init import init
 
 app = typer.Typer(
@@ -33,3 +34,4 @@ app.command()(migration)
 app.command()(migrate)
 app.command("migrate:rollback")(migrate_rollback)
 app.command("migrate:status")(migrate_status)
+app.command()(model)

@@ -477,6 +477,44 @@ if __name__ == "__main__":
     sys.exit(main())
 '''
 
+MODEL_BASE_PY = '''\
+"""The declarative base every model in app/model/ inherits from."""
+
+from sqlalchemy.orm import DeclarativeBase
+
+
+class Base(DeclarativeBase):
+    """Base class for the application's models; ``Base.metadata`` holds their tables."""
+'''
+
+_MODEL_PY = Template('''\
+"""Model for the '$table' table."""
+
+from datetime import datetime
+
+from sqlalchemy import DateTime, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.model.base import Base
+
+
+class $class_name(Base):
+    """A row of the ``$table`` table."""
+
+    __tablename__ = "$table"
+
+    # The columns of the default create-table migration. Migrations own the
+    # table's structure, so when one adds a column, add it here too, e.g.:
+    # name: Mapped[str] = mapped_column(String(255))  (import String from sqlalchemy)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.current_timestamp()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.current_timestamp()
+    )
+''')
+
 SQLALCHEMY_CONNECTION_PY = '''\
 """SQLAlchemy engine and per-request sessions."""
 
@@ -547,3 +585,7 @@ def create_table_migration_py(table: str, summary: str) -> str:
 
 def update_table_migration_py(table: str, summary: str) -> str:
     return _UPDATE_TABLE_MIGRATION_PY.substitute(table=table, summary=summary)
+
+
+def model_py(class_name: str, table: str) -> str:
+    return _MODEL_PY.substitute(class_name=class_name, table=table)
