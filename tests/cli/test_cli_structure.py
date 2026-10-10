@@ -19,6 +19,7 @@ EXPECTED_COMMANDS = {
     "migrate": "fastapi_foundry.cli.commands.migrations.migrate",
     "migrate:rollback": "fastapi_foundry.cli.commands.migrations.migrate_rollback",
     "migrate:status": "fastapi_foundry.cli.commands.migrations.migrate_status",
+    "model": "fastapi_foundry.cli.commands.models.model",
 }
 
 

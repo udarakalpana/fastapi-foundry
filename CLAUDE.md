@@ -41,6 +41,7 @@ cli/prompts/*.py            interactive questions; return validated values, re-a
 generators/project.py       ProjectName validation + create_project()
 generators/migration.py     table-name validation, project-root check, create_migration(),
    │                        existing_tables()
+generators/model.py         model-name validation, model/table name derivation, create_model()
 generators/templates.py     the text of every generated file (no logic beyond substitution)
 runner.py                   launches the generated project's own migrator via `uv run`
 ```
@@ -51,7 +52,8 @@ Layer rules:
   generators/runner, and is the only layer that prints or calls `typer.Exit`.
 - **Generators and runner never import Typer or print.** They raise domain exceptions
   (`InvalidProjectNameError`, `ProjectExistsError`, `InvalidTableNameError`,
-  `NotAProjectError`, `MigratorNotFoundError`, `UvNotFoundError`) with user-ready messages;
+  `InvalidModelNameError`, `ModelExistsError`, `NotAProjectError`,
+  `MigratorNotFoundError`, `UvNotFoundError`) with user-ready messages;
   the command module catches them and shows `Error: <message>` on stderr.
 - **Generator functions take an explicit path** (`parent_dir`, `project_root`, and `now` for
   timestamps), defaulting to `Path.cwd()` / current time. Tests always pass them explicitly.
@@ -69,7 +71,10 @@ Layer rules:
   if writing fails. Same-second migration names get a `_2`, `_3`… suffix.
 - **Validate names before using them in paths.** Project names: `^[A-Za-z][A-Za-z0-9_-]*$`,
   not a keyword, stdlib module or reserved package (`fastapi`, `tests`, …). Table names:
-  `^[A-Za-z][A-Za-z0-9_]*$`, max 64 chars, lowercased.
+  `^[A-Za-z][A-Za-z0-9_]*$`, max 64 chars, lowercased. Model names: PascalCase
+  `^[A-Z][A-Za-z0-9]*$`, not a keyword, `Base` or bare `Model`.
+- **Models never overwrite either**: `app/model/<snake_name>.py` is opened with `"x"`
+  (`ModelExistsError`), and `app/model/base.py` is written only if missing.
 - **Commands that work on a project check the root first** (`ensure_project_root`: needs
   `pyproject.toml` and `app/routes.py`) *before* prompting or writing anything.
 - **Migrations are discovered without a database**: each file has a module-level
@@ -107,16 +112,18 @@ Layer rules:
 │   │   ├── main.py             # Typer app + command registration, in --help order
 │   │   ├── commands/
 │   │   │   ├── project/init.py
-│   │   │   └── migrations/     # migration.py, migrate.py, migrate_rollback.py,
-│   │   │                       # migrate_status.py, _migrator.py (shared helper)
-│   │   └── prompts/            # menu.py (numbered menu), migration.py
-│   ├── generators/             # project.py, migration.py, templates.py
+│   │   │   ├── migrations/     # migration.py, migrate.py, migrate_rollback.py,
+│   │   │   │                   # migrate_status.py, _migrator.py (shared helper)
+│   │   │   └── models/model.py
+│   │   └── prompts/            # menu.py (numbered menu), migration.py, model.py
+│   ├── generators/             # project.py, migration.py, model.py, templates.py
 │   └── runner.py               # starts the project's migrator
 └── tests/                      # mirrors src/ by area
     ├── cli/                    # command registration and entry point
     ├── generators/
     │   ├── project/            # one file per project feature (config, env, database, …)
-    │   └── migration/          # generator, templates, project-root check, table discovery
+    │   ├── migration/          # generator, templates, project-root check, table discovery
+    │   └── model/              # names, generator, command, generated model against SQLite
     └── runner/                 # migrate commands (subprocess faked) and the real migrator
 ```
 
@@ -130,7 +137,8 @@ myproject/
     ├── routes.py                     # FastAPI app; thin routes delegating to controllers
     ├── controller/home_controller.py
     ├── config/                       # app.py, database.py, sqlalchemy_connection.py
-    └── database/                     # schema.py, migrator.py, <timestamp>_create_users_table.py
+    ├── database/                     # schema.py, migrator.py, <timestamp>_create_users_table.py
+    └── model/                        # base.py + <name>_model.py (only after `fastapi-foundry model`)
 ```
 
 ### Adding a command
