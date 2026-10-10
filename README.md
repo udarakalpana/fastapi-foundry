@@ -27,6 +27,7 @@ uvx fastapi-foundry init myproject
 - **Safe by default**: never overwrites an existing directory and rejects unsafe project names.
 - **Same commands every time**: the run command is `uvicorn app.routes:app` in every generated project.
 - **Database ready**: a SQLAlchemy engine and a `get_db` session dependency, connecting to MySQL through PyMySQL with credentials from `.env`.
+- **Model generator**: `fastapi-foundry model` creates a SQLAlchemy model class in `app/model/` for an existing or new table.
 
 ## Requirements
 
@@ -134,8 +135,11 @@ myproject/
     │   └── sqlalchemy_connection.py        # SQLAlchemy engine, SessionLocal and get_db
     ├── controller/
     │   └── home_controller.py              # Handles the default route
-    └── database/
-        └── 20260922143022_create_users_table.py
+    ├── database/
+    │   └── 20260922143022_create_users_table.py
+    └── model/                              # Created by `fastapi-foundry model`
+        ├── base.py                         # Declarative Base every model inherits from
+        └── user_model.py                   # One module per model class
 ```
 
 Generated projects are applications, not libraries: there is no `[build-system]` and no
@@ -274,6 +278,7 @@ fastapi-foundry --help          # Show available commands
 fastapi-foundry init --help     # Show help for the init command
 fastapi-foundry init <name>     # Create a new project in the current directory
 fastapi-foundry migration       # Create a migration file in ./app/database
+fastapi-foundry model           # Create a model class in ./app/model
 ```
 
 ## Migrations
@@ -332,13 +337,87 @@ def downgrade() -> None:
 The `upgrade()` and `downgrade()` bodies are yours to fill in; fastapi-foundry
 does not run migrations yet.
 
+## Models
+
+Run `fastapi-foundry model` from the project root to add a SQLAlchemy model class:
+
+```bash
+uvx fastapi-foundry model
+```
+
+Like `migration`, it stops with an error outside a project root. It first asks
+whether the model is for an existing database table.
+
+**Yes**: it lists the tables your migrations already create (read from their
+`TABLE` constants, no database connection needed). Pick one, then accept the
+suggested model name or type your own:
+
+```text
+Is this model for an existing database table?
+  1) Yes
+  2) No
+Select [1-2]: 1
+
+Select the table this model represents
+  1) users
+Select [1-1]: 1
+Model name (PascalCase, e.g. UserModel) [UserModel]:
+Created model: app/model/user_model.py (table 'users')
+```
+
+**No**: it asks for the model name and derives the table from it, dropping a
+trailing `Model` and pluralising the rest (`ProductModel` → `products`,
+`CategoryModel` → `categories`, `OrderItemModel` → `order_items`). Create the
+table with `fastapi-foundry migration` if it doesn't exist yet.
+
+```text
+Select [1-2]: 2
+Model name (PascalCase, e.g. ProductModel): ProductModel
+Created model: app/model/product_model.py (table 'products')
+```
+
+Model names are PascalCase: letters and digits, starting with a capital letter.
+Each model is written to its own snake_case module (`ProductModel` →
+`app/model/product_model.py`) and maps the columns every create-table migration
+starts with:
+
+```python
+class ProductModel(Base):
+    """A row of the ``products`` table."""
+
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.current_timestamp()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.current_timestamp()
+    )
+```
+
+Migrations own the table's structure: when a migration adds a column, add the
+matching attribute to the model. All models inherit from `Base` in
+`app/model/base.py`, which the command creates the first time it runs. An
+existing model file, or a `base.py` you have customised, is never overwritten.
+
+Use a model with the session from `get_db`:
+
+```python
+from sqlalchemy import select
+
+from app.model.user_model import UserModel
+
+users = db.scalars(select(UserModel)).all()
+```
+
 ## Roadmap
 
 fastapi-foundry is in early development. Planned features include:
 
 - Running migrations with Alembic
 - Settings management with Pydantic Settings
-- Generators for models and routes
+- Generators for routes
 - Authentication scaffolding
 - Docker support
 
