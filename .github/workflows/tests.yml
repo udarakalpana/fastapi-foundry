@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+
+# A new push to the same PR supersedes the run that is still in progress.
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      # Report every version's result instead of stopping at the first failure.
+      fail-fast: false
+      matrix:
+        # Matches the versions listed in the pyproject.toml classifiers.
+        python-version: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv has no floating major tag (e.g. v10), so pin the exact release commit.
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      # --locked fails the run if uv.lock is out of date with pyproject.toml.
+      - run: uv run --locked pytest
