@@ -1,7 +1,7 @@
 """Tests for ``fastapi-foundry migrate``, ``migrate:rollback`` and ``migrate:status``.
 
 These commands only start the project's own runner through ``uv run``, so
-``subprocess.run`` is replaced here; tests/test_migration_runner.py covers
+``subprocess.run`` is replaced here; tests/runner/test_migration_runner.py covers
 the runner itself.
 """
 
