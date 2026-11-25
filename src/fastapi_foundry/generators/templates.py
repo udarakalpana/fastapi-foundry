@@ -169,6 +169,29 @@ class HomeController:
         return {"message": "Hello from fastapi-foundry"}
 '''
 
+_CONTROLLER_PY = Template('''\
+"""Controller for $resource."""
+
+
+class $class_name:
+    """Handles requests for $resource."""
+
+    def index(self) -> dict[str, str]:
+        return {"message": "$class_name index"}
+''')
+
+# Printed by `fastapi-foundry controller` for the user to add to app/routes.py.
+_CONTROLLER_ROUTE_PY = Template('''\
+from app.controller.$module import $class_name
+
+$module = $class_name()
+
+
+@app.get("$path")
+def $function() -> dict[str, str]:
+    return $module.index()
+''')
+
 _APP_CONFIG_PY = Template('''\
 """Application configuration read from environment variables."""
 
@@ -589,3 +612,13 @@ def update_table_migration_py(table: str, summary: str) -> str:
 
 def model_py(class_name: str, table: str) -> str:
     return _MODEL_PY.substitute(class_name=class_name, table=table)
+
+
+def controller_py(class_name: str, resource: str) -> str:
+    return _CONTROLLER_PY.substitute(class_name=class_name, resource=resource)
+
+
+def controller_route_py(class_name: str, module: str, path: str, function: str) -> str:
+    return _CONTROLLER_ROUTE_PY.substitute(
+        class_name=class_name, module=module, path=path, function=function
+    )

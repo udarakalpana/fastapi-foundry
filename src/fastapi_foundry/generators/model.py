@@ -12,6 +12,7 @@ from pathlib import Path
 
 from fastapi_foundry.generators import templates
 from fastapi_foundry.generators.migration import InvalidTableNameError, normalize_table_name
+from fastapi_foundry.generators.naming import pluralize, singularize, snake_case
 
 MODELS_DIR = Path("app", "model")
 BASE_MODULE = "base.py"
@@ -25,9 +26,6 @@ _MODEL_SUFFIX = "Model"
 
 # "Base" is the declarative base class every model inherits from.
 _RESERVED_MODEL_NAMES = frozenset({"Base"})
-
-# Word boundaries in PascalCase: "OrderItem" -> "Order|Item", "HTTPClient" -> "HTTP|Client".
-_WORD_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 
 _EXAMPLE = "e.g. 'ProductModel' or 'OrderItemModel'"
 
@@ -68,7 +66,7 @@ def normalize_model_name(raw_name: str) -> str:
 
 def model_module_name(model_name: str) -> str:
     """Return the snake_case module name for ``model_name`` (``ProductModel`` -> ``product_model``)."""
-    return _snake_case(model_name)
+    return snake_case(model_name)
 
 
 def table_name_for_model(model_name: str) -> str:
@@ -76,14 +74,14 @@ def table_name_for_model(model_name: str) -> str:
     stem = model_name
     if stem.endswith(_MODEL_SUFFIX) and stem != _MODEL_SUFFIX:
         stem = stem.removesuffix(_MODEL_SUFFIX)
-    *words, last = _snake_case(stem).split("_")
-    return "_".join([*words, _pluralize(last)])
+    *words, last = snake_case(stem).split("_")
+    return "_".join([*words, pluralize(last)])
 
 
 def model_name_for_table(table: str) -> str:
     """Return the suggested model name for ``table`` (``user_roles`` -> ``UserRoleModel``)."""
     *words, last = table.split("_")
-    return "".join(word.capitalize() for word in [*words, _singularize(last)]) + _MODEL_SUFFIX
+    return "".join(word.capitalize() for word in [*words, singularize(last)]) + _MODEL_SUFFIX
 
 
 def models_dir(project_root: Path | None = None) -> Path:
@@ -128,26 +126,3 @@ def create_model(model_name: str, table: str, project_root: Path | None = None) 
 
     return model_path
 
-
-def _snake_case(name: str) -> str:
-    return _WORD_BOUNDARY.sub("_", name).lower()
-
-
-def _pluralize(word: str) -> str:
-    """English plural for the common cases; good enough for a default table name."""
-    if len(word) > 1 and word.endswith("y") and word[-2] not in "aeiou":
-        return word[:-1] + "ies"
-    if word.endswith(("s", "x", "z", "ch", "sh")):
-        return word + "es"
-    return word + "s"
-
-
-def _singularize(word: str) -> str:
-    """Undo :func:`_pluralize` for the common cases, leaving other words alone."""
-    if len(word) > 3 and word.endswith("ies"):
-        return word[:-3] + "y"
-    if word.endswith("es") and word[:-2].endswith(("ss", "us", "x", "ch", "sh")):
-        return word[:-2]
-    if len(word) > 1 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
-        return word[:-1]
-    return word
