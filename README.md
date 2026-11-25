@@ -28,6 +28,7 @@ uvx fastapi-foundry init myproject
 - **Same commands every time**: the run command is `uvicorn app.routes:app` in every generated project.
 - **Database ready**: a SQLAlchemy engine and a `get_db` session dependency, connecting to MySQL through PyMySQL with credentials from `.env`.
 - **Model generator**: `fastapi-foundry model` creates a SQLAlchemy model class in `app/model/` for an existing or new table.
+- **Controller generator**: `fastapi-foundry controller` creates a controller class in `app/controller/` and shows the route to add for it.
 
 ## Requirements
 
@@ -134,7 +135,8 @@ myproject/
     │   ├── database.py                     # DB_* settings and the DATABASE_URL built from them
     │   └── sqlalchemy_connection.py        # SQLAlchemy engine, SessionLocal and get_db
     ├── controller/
-    │   └── home_controller.py              # Handles the default route
+    │   ├── home_controller.py              # Handles the default route
+    │   └── product_controller.py           # Created by `fastapi-foundry controller`
     ├── database/
     │   └── 20260922143022_create_users_table.py
     └── model/                              # Created by `fastapi-foundry model`
@@ -173,8 +175,8 @@ class HomeController:
         return {"message": "Hello from fastapi-foundry"}
 ```
 
-Add a controller class per resource in `app/controller/`, and give it a route in
-`app/routes.py`.
+Add a controller class per resource in `app/controller/` (`fastapi-foundry controller`
+creates one, see [Controllers](#controllers)), and give it a route in `app/routes.py`.
 
 ## Configuration
 
@@ -279,6 +281,7 @@ fastapi-foundry init --help     # Show help for the init command
 fastapi-foundry init <name>     # Create a new project in the current directory
 fastapi-foundry migration       # Create a migration file in ./app/database
 fastapi-foundry model           # Create a model class in ./app/model
+fastapi-foundry controller      # Create a controller class in ./app/controller
 ```
 
 ## Migrations
@@ -410,6 +413,49 @@ from app.model.user_model import UserModel
 
 users = db.scalars(select(UserModel)).all()
 ```
+
+## Controllers
+
+Run `fastapi-foundry controller` from the project root to add a controller class:
+
+```bash
+uvx fastapi-foundry controller
+```
+
+It asks for the controller name in PascalCase. The `Controller` suffix is added if
+you leave it out, so `Product` and `ProductController` both create
+`ProductController`:
+
+```text
+Controller name (PascalCase, e.g. ProductController): Product
+Created controller: app/controller/product_controller.py
+
+To serve it, add a route to app/routes.py:
+
+    from app.controller.product_controller import ProductController
+
+    product_controller = ProductController()
+
+
+    @app.get("/products")
+    def list_products() -> dict[str, str]:
+        return product_controller.index()
+```
+
+Each controller is written to its own snake_case module (`OrderItemController` →
+`app/controller/order_item_controller.py`) with an `index` method to start from:
+
+```python
+class ProductController:
+    """Handles requests for products."""
+
+    def index(self) -> dict[str, str]:
+        return {"message": "ProductController index"}
+```
+
+The command never edits `app/routes.py`, which is your file; it prints the route
+to copy instead, using the plural resource as its path (`/products`,
+`/order-items`). An existing controller file is never overwritten.
 
 ## Roadmap
 

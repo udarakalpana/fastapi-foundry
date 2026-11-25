@@ -7,6 +7,7 @@ questions in ``fastapi_foundry.cli.prompts``.
 
 import typer
 
+from fastapi_foundry.cli.commands.controllers.controller import controller
 from fastapi_foundry.cli.commands.migrations.migrate import migrate
 from fastapi_foundry.cli.commands.migrations.migrate_rollback import migrate_rollback
 from fastapi_foundry.cli.commands.migrations.migrate_status import migrate_status
@@ -35,3 +36,4 @@ app.command()(migrate)
 app.command("migrate:rollback")(migrate_rollback)
 app.command("migrate:status")(migrate_status)
 app.command()(model)
+app.command()(controller)
